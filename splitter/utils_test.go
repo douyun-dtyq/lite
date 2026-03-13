@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	git "github.com/libgit2/git2go/v34"
+	"github.com/go-git/go-git/v6"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -146,11 +146,10 @@ func TestNormalizeOrigin(t *testing.T) {
 
 	_, _, headCommitHash := makeTestRepo(t, tempDir)
 
-	repo, err := git.OpenRepository(filepath.Join(tempDir, "test-repo"))
+	repo, err := git.PlainOpen(".")
 	if !assert.NoError(t, err) {
 		t.FailNow()
 	}
-	defer repo.Free()
 
 	t.Run("HEAD", func(t *testing.T) {
 		ref, err := normalizeOrigin(repo, "HEAD")

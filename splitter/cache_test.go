@@ -3,13 +3,12 @@ package splitter
 import (
 	"crypto/rand"
 	"encoding/hex"
-	"fmt"
 	mathRand "math/rand/v2"
 	"os"
 	"path/filepath"
 	"testing"
 
-	git "github.com/libgit2/git2go/v34"
+	"github.com/go-git/go-git/v6/plumbing"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -50,17 +49,8 @@ func TestCache(t *testing.T) {
 	}
 	defer cache.close()
 
-	headCommitHashBytes, err := hex.DecodeString(headCommitHash)
-	if !assert.NoError(t, err) {
-		t.FailNow()
-	}
-	testOidHead := git.NewOidFromBytes(headCommitHashBytes)
-	fmt.Println(testOidHead.String())
-	oid2CommitHashBytes, err := hex.DecodeString(bCommitHashes[0])
-	if !assert.NoError(t, err) {
-		t.FailNow()
-	}
-	testOid2 := git.NewOidFromBytes(oid2CommitHashBytes)
+	testOidHead := plumbing.NewHash(headCommitHash)
+	testOid2 := plumbing.NewHash(bCommitHashes[0])
 
 	rng := mathRand.ChaCha8{}
 	seed := [32]byte{}
@@ -72,7 +62,7 @@ func TestCache(t *testing.T) {
 		oidGot := cache.getHead()
 		assert.Nil(t, oidGot)
 
-		cache.setHead(testOid2)
+		cache.setHead(&testOid2)
 		oidGot = cache.getHead()
 		if !assert.NotNil(t, oidGot) {
 			t.FailNow()
@@ -81,39 +71,40 @@ func TestCache(t *testing.T) {
 	})
 
 	t.Run("GetSet", func(t *testing.T) {
-		oidGot := cache.get(testOid2)
+		oidGot := cache.get(&testOid2)
 		assert.Nil(t, oidGot)
 
-		cache.set(testOid2, testOidHead)
-		oidGot = cache.get(testOid2)
+		cache.set(&testOid2, &testOidHead)
+		oidGot = cache.get(&testOid2)
 		if !assert.NotNil(t, oidGot) {
 			t.FailNow()
 		}
 		assert.Equal(t, testOidHead.String(), oidGot.String())
 
 		const testOidCount = 10
-		testOidKeys := make([][]byte, testOidCount*20)
-		testOidValues := make([][]byte, testOidCount*20)
+		testOidKeys := make([]string, testOidCount)
+		testOidValues := make([]string, testOidCount)
 		for i := 0; i < testOidCount; i++ {
 			buf := make([]byte, 40)
 			rng.Read(buf)
-			testOidKeys[i] = buf[0:20]
-			testOidValues[i] = buf[20:40]
+			testOidKeys[i] = hex.EncodeToString(buf[0:20])
+			testOidValues[i] = hex.EncodeToString(buf[20:40])
 
-			oidKey := git.NewOidFromBytes(testOidKeys[i])
-			oidValue := git.NewOidFromBytes(testOidValues[i])
-			cache.set(oidKey, oidValue)
-			oidGot := cache.get(oidKey)
+			oidKey := plumbing.NewHash(testOidKeys[i])
+			oidValue := plumbing.NewHash(testOidValues[i])
+			cache.set(&oidKey, &oidValue)
+			oidGot := cache.get(&oidKey)
 			assert.Equal(t, oidValue.String(), oidGot.String())
 		}
 
-		testGets := make([]*git.Oid, testOidCount)
+		testGets := make([]*plumbing.ObjectID, testOidCount)
 		for i := 0; i < testOidCount; i++ {
-			testGets[i] = git.NewOidFromBytes(testOidKeys[i])
+			hash := plumbing.NewHash(testOidKeys[i])
+			testGets[i] = &hash
 		}
 		oidsGot := cache.gets(testGets)
 		for i := 0; i < testOidCount; i++ {
-			assert.Equal(t, git.NewOidFromBytes(testOidValues[i]).String(), oidsGot[i].String())
+			assert.Equal(t, plumbing.NewHash(testOidValues[i]).String(), oidsGot[i].String())
 		}
 	})
 }
@@ -144,11 +135,7 @@ func TestCacheFlush(t *testing.T) {
 	}
 	defer cache.close()
 
-	headCommitHashBytes, err := hex.DecodeString(headCommitHash)
-	if !assert.NoError(t, err) {
-		t.FailNow()
-	}
-	testOidHead := git.NewOidFromBytes(headCommitHashBytes)
+	testOidHead := plumbing.NewHash(headCommitHash)
 
 	rng := mathRand.ChaCha8{}
 	seed := [32]byte{}
@@ -156,20 +143,20 @@ func TestCacheFlush(t *testing.T) {
 	rng.Seed(seed)
 
 	// set head
-	cache.setHead(testOidHead)
+	cache.setHead(&testOidHead)
 	// set some commits
 	const testOidCount = 10
-	testOidKeys := make([][]byte, testOidCount)
-	testOidValues := make([][]byte, testOidCount)
+	testOidKeys := make([][]byte, testOidCount*20)
+	testOidValues := make([][]byte, testOidCount*20)
 	for i := 0; i < testOidCount; i++ {
 		buf := make([]byte, 40)
 		rng.Read(buf)
 		testOidKeys[i] = buf[0:20]
 		testOidValues[i] = buf[20:40]
 
-		oidKey := git.NewOidFromBytes(testOidKeys[i])
-		oidValue := git.NewOidFromBytes(testOidValues[i])
-		cache.set(oidKey, oidValue)
+		oidKey := plumbing.NewHash(hex.EncodeToString(testOidKeys[i]))
+		oidValue := plumbing.NewHash(hex.EncodeToString(testOidValues[i]))
+		cache.set(&oidKey, &oidValue)
 	}
 
 	// flush it
@@ -192,9 +179,9 @@ func TestCacheFlush(t *testing.T) {
 
 	// check if the commits are set
 	for i := 0; i < testOidCount; i++ {
-		oidKey := git.NewOidFromBytes(testOidKeys[i])
-		oidValue := git.NewOidFromBytes(testOidValues[i])
-		oidGot := newCache.get(oidKey)
+		oidKey := plumbing.NewHash(hex.EncodeToString(testOidKeys[i]))
+		oidValue := plumbing.NewHash(hex.EncodeToString(testOidValues[i]))
+		oidGot := newCache.get(&oidKey)
 		assert.Equal(t, oidValue.String(), oidGot.String())
 	}
 }

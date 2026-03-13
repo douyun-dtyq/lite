@@ -6,7 +6,8 @@ import (
 	"strings"
 	"sync"
 
-	git "github.com/libgit2/git2go/v34"
+	"github.com/go-git/go-git/v6"
+	"github.com/go-git/go-git/v6/plumbing"
 	bolt "go.etcd.io/bbolt"
 )
 
@@ -73,20 +74,14 @@ func Split(config *Config, result *Result) error {
 
 // Validate validates the configuration
 func (config *Config) Validate() error {
-	ok, err := git.ReferenceNameIsValid(config.Origin)
+	err := plumbing.ReferenceName(config.Origin).Validate()
 	if err != nil {
-		return err
-	}
-	if !ok {
-		return fmt.Errorf("the origin is not a valid Git reference")
+		return fmt.Errorf("the origin is not a valid Git reference: %w", err)
 	}
 
-	ok, err = git.ReferenceNameIsValid(config.Target)
-	if err != nil {
-		return err
-	}
-	if config.Target != "" && !ok {
-		return fmt.Errorf("the target is not a valid Git reference")
+	err = plumbing.ReferenceName(config.Target).Validate()
+	if config.Target != "" && err != nil {
+		return fmt.Errorf("the target is not a valid Git reference: %w", err)
 	}
 
 	git, ok := supportedGitVersions[config.GitVersion]

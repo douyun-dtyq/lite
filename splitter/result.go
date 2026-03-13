@@ -4,7 +4,7 @@ import (
 	"sync"
 	"time"
 
-	git "github.com/libgit2/git2go/v34"
+	"github.com/go-git/go-git/v6/plumbing"
 )
 
 // Result represents the outcome of a split
@@ -12,7 +12,7 @@ type Result struct {
 	mu        sync.RWMutex
 	traversed int
 	created   int
-	head      *git.Oid
+	head      *plumbing.ObjectID
 	duration  time.Duration
 }
 
@@ -47,13 +47,13 @@ func (r *Result) Duration(precision time.Duration) time.Duration {
 }
 
 // Head returns the latest split sha1
-func (r *Result) Head() *git.Oid {
+func (r *Result) Head() *plumbing.ObjectID {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 	return r.head
 }
 
-func (r *Result) moveHead(oid *git.Oid) {
+func (r *Result) moveHead(oid *plumbing.ObjectID) {
 	r.mu.Lock()
 	r.head = oid
 	r.mu.Unlock()

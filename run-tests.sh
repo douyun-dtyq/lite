@@ -116,7 +116,7 @@ mergeTest() {
     git merge branch2 --no-edit -s ours > /dev/null
 
     GIT_SUBTREE_SPLIT_SHA1_2="a2c4245703f8dac149ab666242a12e1d4b2510d9"
-    GIT_SUBTREE_SPLIT_SHA1_3="ba0dab2c4e99d68d11088f2c556af92851e93b14"
+    GIT_SUBTREE_SPLIT_SHA1_3=`git subtree split --prefix=src/ -q`
     GIT_SPLITSH_SHA1_2=`$LITE_PATH --git="<2.8.0" --prefix=src/ 2>/dev/null`
     GIT_SPLITSH_SHA1_3=`$LITE_PATH --prefix=src/ 2>/dev/null`
 

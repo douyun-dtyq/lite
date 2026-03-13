@@ -7,7 +7,8 @@ import (
 	"regexp"
 	"strings"
 
-	git "github.com/libgit2/git2go/v34"
+	"github.com/go-git/go-git/v6"
+	"github.com/go-git/go-git/v6/plumbing"
 )
 
 var messageNormalizer = regexp.MustCompile(`\s*\r?\n`)
@@ -61,17 +62,29 @@ func normalizeOrigin(repo *git.Repository, origin string) (string, error) {
 		origin = "HEAD"
 	}
 
-	obj, ref, err := repo.RevparseExt(origin)
-	if err != nil {
-		return "", fmt.Errorf("bad revision for origin: %s", err)
+	// try as a tagReference
+	if tagRef, err := repo.Tag(origin); err == nil {
+		return tagRef.Name().String(), nil
 	}
-	if obj != nil {
-		obj.Free()
-	}
-	if ref == nil {
-		return "", fmt.Errorf("bad revision for origin: ref is nil")
-	}
-	defer ref.Free()
 
-	return ref.Name(), nil
+	if ref, err := repo.Reference(plumbing.ReferenceName(origin), true); err == nil {
+		return ref.Name().String(), nil
+	}
+
+	return "", fmt.Errorf("bad revision for origin")
+}
+
+func peelTag(repo *git.Repository, maybeTagHash plumbing.Hash) (*plumbing.Hash, error) {
+	tagObj, err := repo.TagObject(maybeTagHash)
+	switch err {
+	case nil:
+		// annotated tag
+		return &tagObj.Target, nil
+	case plumbing.ErrObjectNotFound:
+		// lightweight tag
+		return &maybeTagHash, nil
+	default:
+		// real error
+		return nil, err
+	}
 }
