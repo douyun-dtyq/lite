@@ -29,7 +29,7 @@ simpleTest() {
     rm -rf simple
     mkdir simple
     cd simple
-    git init > /dev/null
+    git init --initial-branch=main > /dev/null
 
     switchAsSammy "Sat, 24 Nov 1973 19:01:02 +0200" "Sat, 24 Nov 1973 19:11:22 +0200"
     echo "a" > a
@@ -83,7 +83,7 @@ mergeTest() {
     rm -rf merge
     mkdir -p merge/src
     cd merge
-    git init > /dev/null
+    git init --initial-branch=main > /dev/null
 
     switchAsSammy "Sat, 24 Nov 1973 19:01:01 +0200" "Sat, 24 Nov 1973 19:01:01 +0200"
     echo -e "a\n\nb\n\nc\n\n" > src/foo
@@ -159,7 +159,7 @@ filemodeTest() {
     rm -rf filemode
     mkdir filemode
     cd filemode
-    git init > /dev/null
+    git init --initial-branch=main > /dev/null
 
     switchAsSammy "Sat, 24 Nov 1973 19:01:02 +0200" "Sat, 24 Nov 1973 19:11:22 +0200"
     echo "a" > a

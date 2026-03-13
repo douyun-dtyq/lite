@@ -68,6 +68,9 @@ func normalizeOrigin(repo *git.Repository, origin string) (string, error) {
 	if obj != nil {
 		obj.Free()
 	}
+	if ref == nil {
+		return "", fmt.Errorf("bad revision for origin: ref is nil")
+	}
 	defer ref.Free()
 
 	return ref.Name(), nil
