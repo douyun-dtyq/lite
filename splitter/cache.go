@@ -90,7 +90,7 @@ func (c *cache) setHead(head *git.Oid) {
 }
 
 func (c *cache) getHead() *git.Oid {
-	if head, ok := c.data["head"+c.branch]; ok {
+	if head, ok := c.data["head/"+c.branch]; ok {
 		return git.NewOidFromBytes(head)
 	}
 
